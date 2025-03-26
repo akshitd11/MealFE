@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:meal_ui/screens/profile_screen.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:meal_ui/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -16,6 +20,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isEmailFocused = false;
   bool _isPasswordFocused = false;
   bool _isPasswordVisible = false;
+
+  File? _selectedImage; // To store the selected image
+
+  // Variables to store user input
+  String _name = '';
+  String _email = '';
+  String _password = '';
 
   @override
   void initState() {
@@ -41,6 +52,76 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       _isPasswordFocused = _passwordFocusNode.hasFocus;
     });
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      setState(() {
+        _selectedImage = File(image.path); // Store the selected image
+      });
+    }
+  }
+
+  Future<void> _registerUser() async {
+    if (_name.isEmpty || _email.isEmpty || _password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all fields'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!_isValidEmail(_email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final response = await ApiService.registerUser(
+        name: _name,
+        email: _email,
+        password: _password,
+      );
+
+      // Extract the token from the response
+      final token = response['access_token'];
+
+      // Save the token in SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', token);
+
+      // Navigate to the next page
+      print('Registration successful: $response');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
+    } catch (error) {
+      // Display only the error message without "Exception: "
+      final errorMessage = error.toString().replaceAll('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
+      print('Registration failed: $errorMessage');
+    }
+  }
+
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    return emailRegex.hasMatch(email);
   }
 
   @override
@@ -84,21 +165,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       children: [
                         CircleAvatar(
                           radius: 75,
-                          backgroundImage: const NetworkImage(
-                              'https://via.placeholder.com/150'), // Replace with user image
+                          backgroundImage: _selectedImage != null
+                              ? FileImage(_selectedImage!) // Display selected image
+                              : const NetworkImage(
+                                  'https://via.placeholder.com/150',
+                                ) as ImageProvider, // Default placeholder
                           backgroundColor: Colors.grey[200],
                         ),
                         FloatingActionButton(
-                          onPressed: () {
-                            // Add functionality to upload/change profile picture
-                          },
+                          onPressed: _pickImage, // Open file explorer
                           mini: true,
                           backgroundColor: const Color(0xFF17A2B8),
                           child: const Icon(Icons.camera_alt, color: Colors.white),
                         ),
                       ],
                     ),
-                    Spacer(),
+Spacer(),
+Spacer(),
                     const SizedBox(height: 25),
                     Container(
                       height: 50,
@@ -115,6 +198,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ],
                       ),
                       child: TextField(
+                        onChanged: (value) => _name = value, // Capture name input
                         focusNode: _nameFocusNode,
                         decoration: InputDecoration(
                           labelText: 'Name',
@@ -150,6 +234,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ],
                       ),
                       child: TextField(
+                        onChanged: (value) => _email = value, // Capture email input
                         focusNode: _emailFocusNode,
                         decoration: InputDecoration(
                           labelText: 'Email',
@@ -185,6 +270,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ],
                       ),
                       child: TextField(
+                        onChanged: (value) => _password = value, // Capture password input
                         focusNode: _passwordFocusNode,
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
@@ -220,32 +306,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
             ),
-            Spacer(),
+Spacer(),
             Column(
               children: [
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      backgroundColor: const Color(0xFF17A2B8),
-                    ),
-                    child: const Text(
-                      'Register',
-                      style: TextStyle(fontSize: 18),
-                    ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () {
+                  _registerUser();
+                },
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  backgroundColor: const Color(0xFF17A2B8),
                 ),
+                child: const Text(
+                  'Register',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
+),
               ],
             ),
           ],

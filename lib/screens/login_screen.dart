@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:meal_ui/screens/goal_screen.dart';
+import 'package:meal_ui/screens/dashboard_screen.dart'; // Replace with your Dashboard screen
+import 'package:meal_ui/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'forgot_password_screen.dart'; // Import the ForgotPasswordScreen
 
 class LoginScreen extends StatefulWidget {
@@ -15,6 +17,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isEmailFocused = false;
   bool _isPasswordFocused = false;
   bool _isPasswordVisible = false;
+
+  String _email = '';
+  String _password = '';
 
   @override
   void initState() {
@@ -33,6 +38,62 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _isPasswordFocused = _passwordFocusNode.hasFocus;
     });
+  }
+
+  Future<void> _loginUser() async {
+    if (_email.isEmpty || _password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all fields'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!_isValidEmail(_email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final response = await ApiService.loginUser(
+        email: _email,
+        password: _password,
+      );
+
+      // Extract the token from the response
+      final token = response['access_token'];
+
+      // Save the token in SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', token);
+
+      // Navigate to the Dashboard
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+      );
+    } catch (error) {
+      // Display only the error message without "Exception: "
+      final errorMessage = error.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+    return emailRegex.hasMatch(email);
   }
 
   @override
@@ -78,11 +139,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.black26,
                             spreadRadius: 2,
                             blurRadius: 5,
-                            offset: Offset(0, 3),
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
                       child: TextField(
+                        onChanged: (value) => _email = value,
                         focusNode: _emailFocusNode,
                         decoration: InputDecoration(
                           labelText: 'Email',
@@ -112,11 +174,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Colors.black26,
                             spreadRadius: 2,
                             blurRadius: 5,
-                            offset: Offset(0, 3),
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
                       child: TextField(
+                        onChanged: (value) => _password = value,
                         focusNode: _passwordFocusNode,
                         obscureText: !_isPasswordVisible,
                         decoration: InputDecoration(
@@ -159,12 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const GoalScreen()),
-                      );
-                    },
+                    onPressed: _loginUser,
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),

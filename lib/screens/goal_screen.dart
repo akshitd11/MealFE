@@ -140,17 +140,8 @@ class _GoalScreenState extends State<GoalScreen> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 25),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text(
-                "Back",
-                style: TextStyle(color: Colors.grey, fontSize: 16),
-              ),
-            ),
             FloatingActionButton(
               onPressed: () {
                 Navigator.push(

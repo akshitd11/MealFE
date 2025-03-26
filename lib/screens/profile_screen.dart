@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:meal_ui/screens/me_screen.dart';
+import 'package:meal_ui/screens/welcome_screen.dart';
+import 'package:meal_ui/widgets/custom_bottom_nav_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -7,6 +10,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -16,10 +20,7 @@ class ProfileScreen extends StatelessWidget {
             Navigator.pop(context);
           },
         ),
-        title: const Text(
-          'Profile',
-          style: TextStyle(color: Colors.black),
-        ),
+        
         centerTitle: true,
       ),
       body: Column(
@@ -118,22 +119,25 @@ class ProfileScreen extends StatelessWidget {
                     'Logout',
                     style: TextStyle(color: Colors.red),
                   ),
-                  onTap: () {
-                    // Add functionality for "Logout"
+                  onTap: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.remove('auth_token'); // Remove the stored token
+
+                    // Navigate back to the RegisterScreen
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                      (route) => false, // Remove all previous routes
+                    );
                   },
                 ),
               ],
             ),
           ),
-          // Version
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: Text(
-              'Version: 0.0.6',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ),
         ],
+      ),
+      bottomNavigationBar: const CustomBottomNavBar(
+        currentIndex: 1, // Highlight the Dashboard tab
       ),
     );
   }
