@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({Key? key}) : super(key: key);
@@ -17,12 +18,21 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _isNewPasswordVisible = false;
   bool _isRepeatPasswordVisible = false;
 
-  List<TextEditingController> controllers = List.generate(6, (index) => TextEditingController());
-  List<FocusNode> focusNodes = List.generate(6, (index) => FocusNode());
+  final int otpLength = 6;
+  late List<TextEditingController> controllers;
+  late List<FocusNode> focusNodes;
 
   @override
   void initState() {
     super.initState();
+    controllers = List.generate(
+      otpLength,
+      (_) => TextEditingController(),
+    );
+    focusNodes = List.generate(
+      otpLength,
+      (_) => FocusNode(),
+    );
     _codeFocusNode.addListener(_onCodeFocusChange);
     _newPasswordFocusNode.addListener(_onNewPasswordFocusChange);
     _repeatPasswordFocusNode.addListener(_onRepeatPasswordFocusChange);
@@ -99,35 +109,52 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: List.generate(
-                        6,
+                        otpLength,
                         (index) => SizedBox(
                           width: 50,
                           height: 50,
-                          child: TextField(
-                            controller: controllers[index],
-                            focusNode: focusNodes[index],
-                            textAlign: TextAlign.center,
-                            keyboardType: TextInputType.number,
-                            maxLength: 1,
-                            showCursor: false,
-                            decoration: InputDecoration(
-                              counterText: "",
-                              contentPadding: EdgeInsets.zero,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.grey),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Colors.green),
-                              ),
-                            ),
-                            style: const TextStyle(fontSize: 20),
-                            onChanged: (value) {
-                              if (value.length == 1 && index < 5) {
-                                focusNodes[index + 1].requestFocus();
+                          child: RawKeyboardListener(
+                            focusNode: FocusNode(),
+                            onKey: (RawKeyEvent event) {
+                              if (event is RawKeyDownEvent &&
+                                  event.logicalKey == LogicalKeyboardKey.backspace &&
+                                  controllers[index].text.isEmpty &&
+                                  index > 0) {
+                                controllers[index - 1].clear();
+                                focusNodes[index - 1].requestFocus();
                               }
                             },
+                            child: TextFormField(
+                              controller: controllers[index],
+                              focusNode: focusNodes[index],
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              maxLength: 1,
+                              decoration: InputDecoration(
+                                counterText: "",
+                                contentPadding: EdgeInsets.zero,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.grey),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Colors.green),
+                                ),
+                              ),
+                              style: const TextStyle(fontSize: 20),
+                              onChanged: (value) {
+                                if (value.isNotEmpty) {
+                                  if (index + 1 <= otpLength) {
+                                    
+                                    focusNodes[index + 1].requestFocus();
+                                  } else {
+                                    controllers[index].text = value[0];
+                                    focusNodes[index].unfocus();
+                                  }
+                                }
+                              },
+                            ),
                           ),
                         ),
                       ),
@@ -235,6 +262,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       // Handle reset password action
+                      print('Reset button pressed');
                     },
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
