@@ -89,4 +89,57 @@ class ApiService {
       throw Exception('Failed to fetch user data');
     }
   }
+
+  // Function to send a message
+  static Future<Map<String, dynamic>> sendMessage({
+    required String message,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token'); // Retrieve the token from SharedPreferences
+
+    if (token == null) {
+      throw Exception('No token found');
+    }
+
+    final url = Uri.parse('$baseUrl/log_meal/'); // Replace with your API endpoint
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Include the Bearer token
+        },
+        body: jsonEncode({
+          'meal_description': message,
+          'logged_time': DateTime.now().toIso8601String(), // Optional: Add timestamp
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body); // Return the parsed JSON response
+      } else {
+        throw Exception('Failed to send message: ${response.statusCode}');
+      }
+    } catch (error) {
+      throw Exception('Error sending message: $error');
+    }
+  }
+
+  static Future<Map<String, dynamic>> postLog({required message}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    final url = Uri.parse('$baseUrl/meals/'); // Replace with your API endpoint
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json',  'Authorization': 'Bearer $token',},
+      body: jsonEncode(message),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to post log: ${response.statusCode}');
+    }
+  }
 }
